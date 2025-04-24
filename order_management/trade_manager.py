@@ -2,6 +2,9 @@
 from order_management.fixed_sl_tp import FixedSLTP
 from order_management.close_all_orders import close_all_open_orders
 from order_management.send_order import place_market_order
+# order_management/trade_manager.py
+from order_management.move_sl_tp import move_stop_loss, move_take_profit
+
 
 class TradeManager:
     def __init__(self, broker, strategy, default_sl=10, default_tp=30):
