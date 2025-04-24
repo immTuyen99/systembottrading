@@ -1,64 +1,48 @@
-# # main.py
-
-# from core.config.config import Config
-# from core.broker_adapter import BrokerAdapter
-
-# if __name__ == "__main__":
-#     config = Config()
-#     broker = BrokerAdapter(config)
-
-#     if broker.connect():
-#         market_data = broker.get_symbol_data()
-#         print(f"Dữ liệu thị trường: {market_data}")
-#         broker.disconnect()
-
-
+import time
+import signal
+import sys
 from core.config.config import Config
 from core.broker_adapter import BrokerAdapter
 from strategy.trend_strategy import TrendStrategy
 from order_management.send_order import place_market_order
-import time
+
+def graceful_exit(signal, frame):
+    print("\nĐang dừng chương trình một cách an toàn...")
+    broker.disconnect()  # Đảm bảo ngắt kết nối với broker khi dừng
+    sys.exit(0)  # Thoát chương trình
 
 if __name__ == "__main__":
-    # Load cấu hình và kết nối broker
     config = Config()
     broker = BrokerAdapter(config)
+    strategy = TrendStrategy()
+
+    # Đăng ký tín hiệu dừng (Ctrl+C)
+    signal.signal(signal.SIGINT, graceful_exit)
 
     if broker.connect():
-        print("Kết nối với broker thành công!")
+        symbols = config.get("symbols")
+        
+        while True:  # Vòng lặp vô hạn để kiểm tra tín hiệu giao dịch
+            for symbol in symbols:
+                market_data = broker.get_symbol_data(symbol)
+                print(f"Dữ liệu thị trường cho {symbol}: {market_data}")
 
-        # Khởi tạo chiến lược giao dịch
-        strategy = TrendStrategy()
-
-        # Vòng lặp chính
-        while True:
-            try:
-                # Lấy dữ liệu thị trường
-                market_data = broker.get_symbol_data()
-                print(f"Dữ liệu thị trường: {market_data}")
-
-                # Phân tích tín hiệu và gửi lệnh nếu có tín hiệu
-                for symbol, data in market_data.items():
-                    signal = strategy.generate_signal(symbol, data)
-
-                    # Nếu có tín hiệu mua hoặc bán, gửi lệnh
-                    if signal == "buy":
-                        print(f"[{symbol}] Có tín hiệu MUA → Gửi lệnh")
-                        place_market_order(symbol, 0.01, order_type=0)  # 0 = Mua
-                    elif signal == "sell":
-                        print(f"[{symbol}] Có tín hiệu BÁN → Gửi lệnh")
-                        place_market_order(symbol, 0.01, order_type=1)  # 1 = Bán
-                    else:
-                        print(f"[{symbol}] Không có tín hiệu.")
-
-                # Delay giữa các lần quét
-                time.sleep(10)
-
-            except Exception as e:
-                print("Lỗi trong vòng lặp:", str(e))
-                break
-
-        # Ngắt kết nối khi kết thúc
+                signal = strategy.generate_signal(symbol, market_data)
+                if signal:
+                    print(f"Tín hiệu giao dịch cho {symbol}: {signal}")
+                    place_market_order(
+                        symbol=symbol,
+                        order_type=signal,
+                        volume=0.1,
+                        sl=0.0,
+                        tp=0.0,
+                        magic=config.get("magic_number"),
+                        comment="Test Order"
+                    )
+                else:
+                    print(f"Không có tín hiệu giao dịch cho {symbol}")
+            
+            # Chờ 60 giây trước khi tiếp tục vòng lặp
+            print("Chờ 60 giây trước khi kiểm tra lại...")
+            time.sleep(60)  # Trì hoãn 60 giây
         broker.disconnect()
-    else:
-        print("Không thể kết nối với broker!")
