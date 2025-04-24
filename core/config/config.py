@@ -25,13 +25,19 @@
 
 # core/config/config.py
 
+# core/config/config.py
+
 class Config:
     def __init__(self):
-        # Đây là cấu hình cố định cho broker và các tham số khác
         self.login = 244575425
         self.password = "dmT290699@"
         self.server = "Exness-MT5Trial14"
-        # self.symbols = ["EURUSDm", "GBPUSDm", "USDJPYm"]
-       
+        self.symbols = ["EURUSDm", "GBPUSDm", "USDJPYm"]
+        self.risk_percent = 2.0
+        self.magic_number = 123456
+        self.default_volume = 0.1  # bạn có thể thêm cái này nếu cần
+
+    def get(self, key, default=None):
+        return getattr(self, key, default)
 
 
