@@ -1,16 +1,33 @@
-class TrendStrategy:
-    def generate_signal(self, symbol, market_data):
-        bid = market_data.get("bid")
-        ask = market_data.get("ask")
+from collections import deque
 
-        if bid is None or ask is None:
+class TrendStrategy:
+    def __init__(self):
+        self.price_history = {}  # Lưu lịch sử giá cho mỗi symbol
+        self.window_size = 5     # Số lượng nến để tính MA
+
+    def generate_signal(self, symbol, data):
+        bid = data.get('bid')
+        if bid is None:
             return None
 
-        # Tính chênh lệch giá bid và ask
-        price_diff = ask - bid
-        if price_diff > 0.0001:  # Nếu sự chênh lệch lớn hơn 0.0001
+        # Khởi tạo deque nếu chưa có
+        if symbol not in self.price_history:
+            self.price_history[symbol] = deque(maxlen=self.window_size)
+        
+        # Cập nhật giá mới
+        self.price_history[symbol].append(bid)
+
+        # Chờ đủ dữ liệu MA
+        if len(self.price_history[symbol]) < self.window_size:
+            return None
+
+        # Tính trung bình MA
+        sma = sum(self.price_history[symbol]) / self.window_size
+
+        # Tín hiệu đơn giản: bid vượt lên hoặc cắt xuống MA
+        if bid > sma:
             return "buy"
-        elif price_diff < -0.0001:  # Nếu sự chênh lệch nhỏ hơn -0.0001
+        elif bid < sma:
             return "sell"
         else:
             return None
